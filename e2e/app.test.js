@@ -1,23 +1,38 @@
 import puppetteer from 'puppeteer';
 
+const { fork } = require('child_process');
+
 jest.setTimeout(30000);
-describe('tooltip', () => {
+describe('Form', () => {
   let browser = null;
   let page = null;
+  let server = null;
   const baseUrl = 'http://localhost:9000';
   beforeAll(async () => {
+    server = fork(`${__dirname}/app.server.js`);
+    await new Promise((resolve, reject) => {
+      server.on('error', () => {
+        reject();
+      });
+      server.on('message', (message) => {
+        if (message === 'ok') {
+          resolve();
+        }
+      });
+    });
     browser = await puppetteer.launch({
-      // headless: false,
-      // slowMo: 1000,
+      headless: true,
+      // slowMo: 100,
       // devtools: true,
     });
     page = await browser.newPage();
   });
   afterAll(async () => {
     await browser.close();
+    server.kill();
   });
 
-  test('Открытие тултипа', async () => {
+  test('Popover открывается', async () => {
     await page.goto(baseUrl);
     const button = await page.$('.btn-danger');
     button.click();
@@ -26,7 +41,7 @@ describe('tooltip', () => {
     expect(popoverTitle).toBe('Popover title');
   });
 
-  test('Закрытие тултипа', async () => {
+  test('Popover закрывается', async () => {
     const button = await page.$('.btn-danger');
     await button.click();
     await page.waitForSelector('#popover');
